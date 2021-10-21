@@ -1,22 +1,36 @@
-#.libPaths(new = "/u/arpa/bonafeg/R/x86_64-pc-linux-gnu-library/3.5") ## change this as you need
 load("data/OverviewSourceApp_MunicFVG.rda")
-source("R/configure.R")
-#library(shiny)
-library(highcharter)
+source("util/configure.R") 
+library(shiny)
+library(billboarder)
 library(glue)
+library(dplyr)
+library(bslib)
+library(shinyBS)
 
 ui <- fluidPage(
-
-    column(width = 12,
-           sliderInput("perc", "percentile:", min = 0, max = 100, value = 50, step = 10),
-           selectInput("poll", "inquinante:", choices=unique(SectSA$Pollutant), multiple = F,
-                       selected="PM10"),
-           selectInput("muni", "Comuni:", choices=unique(SectSA$Municipality), 
-                       selected=sample(unique(SectSA$Municipality),10), multiple = T)
+    fluidRow(
+        column(width = 4,
+               selectInput("poll", "inquinante:", choices=unique(SectSA$Pollutant), multiple = F,
+                           selected="PM10"),
+               bsTooltip("poll", "Scegli l\\'inquinante. L\\'analisi si riferisce alla media annua.", placement = "right"),
+               sliderInput("perc", "percentile:", min = 0, max = 100, value = 50, step = 10),
+               bsTooltip("perc", "Le medie annue considerate si riferiscono al periodo 2014-2019 e all\\'intero territorio comunale. Di default consideriamo la mediana di queste medie. Per tenere conto della variabilità spazio-temporale puoi ripetere l\\'analisi considerando percentili diversi rispetto alla mediana.", 
+                         placement = "right")),
+        column(width = 4,
+               selectInput("muni", "Comuni:", choices=unique(SectSA$Municipality), 
+                           selected=sample(unique(SectSA$Municipality),10), multiple = T),
+               bsTooltip("muni", "Sono selezionati casualmente 10 Comuni del FVG. Puoi sceglierne altri.", placement = "right")
+        )
     ),
-    
-    column(width = 6, billboarderOutput("mybb1", height = "500px")),
-    column(width = 6, billboarderOutput("mybb2", height = "500px"))
+    fluidRow(
+        column(width = 6, 
+               billboarderOutput("mybb1", height = "500px"),
+               bsTooltip("mybb1", "Cliccando sulla legenda puoi escludere dal grafico uno o più territori.", placement = "bottom")
+        ),
+        column(width = 6, 
+               billboarderOutput("mybb2", height = "500px"),
+               bsTooltip("mybb2", "Cliccando sulla legenda puoi escludere dal grafico uno o più settori.", placement = "bottom"))
+    )
 )
 
 server <- function(input, output) {
@@ -27,7 +41,7 @@ server <- function(input, output) {
             filter(Percentile==input$perc,
                    Pollutant==input$poll,
                    Municipality%in%input$muni) %>%
-            mutate(Share=signif(Share,2))
+            mutate(Share=round(Share,2))
         
         billboarder() %>% 
             bb_barchart(
@@ -47,7 +61,7 @@ server <- function(input, output) {
             filter(Percentile==input$perc,
                    Pollutant==input$poll,
                    Municipality%in%input$muni) %>%
-            mutate(Share=signif(Share,2)) %>%
+            mutate(Share=round(Share,2)) %>%
             droplevels()
         
         billboarder() %>% 
